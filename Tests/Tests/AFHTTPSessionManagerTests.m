@@ -60,6 +60,31 @@
     expect(progressBlockCalled).will.beTruthy();
 }
 
+- (void)testPostMultipart
+{
+    [self writeTestFile];
+    
+    AFHTTPSessionManager * sessionManager = [[AFHTTPSessionManager alloc] initWithBaseURL:self.baseURL];
+  
+    NSURL *requestUrl = [NSURL URLWithString:@"/post" relativeToURL:self.baseURL];
+  
+    __block BOOL completeBlockCalled = NO;
+
+    NSURLSessionDataTask *task = [sessionManager POST:requestUrl.absoluteString
+                                           parameters:nil
+                            constructingBodyWithBlock:^(id<AFMultipartFormData> formData) {
+        NSError *error;
+        [formData appendPartWithFileURL:[self testFileURL]
+                                   name:@"test.txt"
+                                  error:&error];
+    } success:^(NSURLSessionDataTask *task, id responseObject) {
+        completeBlockCalled = YES;
+    } failure:^(NSURLSessionDataTask *task, NSError *error) {}];
+    
+    expect(task.state).will.equal(NSURLSessionTaskStateCompleted);
+    expect(completeBlockCalled).will.beTruthy();
+}
+
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context{
     if ([keyPath isEqualToString:@"fractionCompleted"]) {
@@ -78,5 +103,6 @@
     NSString *testString = @"Testing, 1, 2, 3, 4, 5.";
     [testString writeToURL:[self testFileURL] atomically:YES encoding:NSStringEncodingConversionAllowLossy error:&error];
 }
+
 
 @end
