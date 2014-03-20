@@ -11,7 +11,6 @@
 #import "AFHTTPSessionManager.h"
 
 @interface AFHTTPSessionManagerTests : AFTestCase
-
 @end
 
 @implementation AFHTTPSessionManagerTests
@@ -24,25 +23,26 @@
     
     NSURL *requestUrl = [NSURL URLWithString:@"/post" relativeToURL:self.baseURL];
     NSError *error;
-    
+
     NSMutableURLRequest *request = [sessionManager.requestSerializer
         multipartFormRequestWithMethod:@"POST"
-        URLString:requestUrl.absoluteString
-       parameters:nil
-        constructingBodyWithBlock:^(id<AFMultipartFormData> formData) {
-            NSError *error;
-            [formData appendPartWithFileURL:[self testFileURL]
-                                       name:@"test.txt"
-                                      error:&error]; }
-        error:&error];
+                             URLString:requestUrl.absoluteString
+                            parameters:nil
+             constructingBodyWithBlock:^(id<AFMultipartFormData> formData) {
+                 NSError *error;
+                 [formData appendPartWithFileURL:[self testFileURL]
+                                            name:@"test.txt"
+                                           error:&error];
+             }
+                                 error:&error];
   
     NSProgress *progress;
     
     __block BOOL completeBlockCalled = NO;
     __block BOOL progressBlockCalled = NO;
   
-    NSURLSessionUploadTask *task = [sessionManager uploadTaskWithStreamedRequest:request progress:&progress completionHandler:^(NSURLResponse *response, id responseObject, NSError *error) {
-      completeBlockCalled = YES;
+    NSURLSessionUploadTask * task = [sessionManager uploadTaskWithStreamedRequest:request progress:&progress completionHandler:^(NSURLResponse *response, id responseObject, NSError *error) {
+        completeBlockCalled = YES;
     }];
     
     [task resume];
@@ -54,6 +54,7 @@
     
     expect(task.state).will.equal(NSURLSessionTaskStateCompleted);
     expect(progress.totalUnitCount).beGreaterThan(0);
+    expect(task.countOfBytesExpectedToSend).will.equal(NSURLSessionTransferSizeUnknown);
     expect(progress.fractionCompleted).will.equal(1.0);
     expect(completeBlockCalled).will.beTruthy();
     expect(progressBlockCalled).will.beTruthy();
@@ -62,7 +63,7 @@
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context{
     if ([keyPath isEqualToString:@"fractionCompleted"]) {
-        BOOL * progressBlockCalled = context;
+        BOOL *progressBlockCalled = context;
         *progressBlockCalled = YES;
     }
 }
