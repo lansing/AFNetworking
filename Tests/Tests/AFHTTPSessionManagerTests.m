@@ -19,29 +19,33 @@
 {
     [self writeTestFile];
     
-    AFHTTPSessionManager * sessionManager = [[AFHTTPSessionManager alloc] initWithBaseURL:self.baseURL];
+    AFHTTPSessionManager *sessionManager = [[AFHTTPSessionManager alloc] initWithBaseURL:self.baseURL];
     
     NSURL *requestUrl = [NSURL URLWithString:@"/post" relativeToURL:self.baseURL];
-    NSError *error;
+
+    NSError *errorFormAppend;
+    NSError *errorRequest;
+    __block NSError *errorTask;
 
     NSMutableURLRequest *request = [sessionManager.requestSerializer
         multipartFormRequestWithMethod:@"POST"
                              URLString:requestUrl.absoluteString
                             parameters:nil
              constructingBodyWithBlock:^(id<AFMultipartFormData> formData) {
-                 NSError *error;
+               NSError *error = errorFormAppend;
                  [formData appendPartWithFileURL:[self testFileURL]
                                             name:@"test.txt"
                                            error:&error];
              }
-                                 error:&error];
+                                 error:&errorRequest];
   
     NSProgress *progress;
     
     __block BOOL completeBlockCalled = NO;
     __block BOOL progressBlockCalled = NO;
   
-    NSURLSessionUploadTask * task = [sessionManager uploadTaskWithStreamedRequest:request progress:&progress completionHandler:^(NSURLResponse *response, id responseObject, NSError *error) {
+    NSURLSessionUploadTask *task = [sessionManager uploadTaskWithStreamedRequest:request progress:&progress completionHandler:^(NSURLResponse *response, id responseObject, NSError *error) {
+        errorTask = error;
         completeBlockCalled = YES;
     }];
     
@@ -51,7 +55,10 @@
                forKeyPath:@"fractionCompleted"
                   options:NSKeyValueObservingOptionNew
                   context:&progressBlockCalled];
-    
+  
+    expect(errorFormAppend).will.beNil();
+    expect(errorRequest).will.beNil();
+    expect(errorTask).will.beNil();
     expect(task.state).will.equal(NSURLSessionTaskStateCompleted);
     expect(progress.totalUnitCount).beGreaterThan(0);
     expect(task.countOfBytesExpectedToSend).will.equal(NSURLSessionTransferSizeUnknown);
@@ -64,23 +71,29 @@
 {
     [self writeTestFile];
     
-    AFHTTPSessionManager * sessionManager = [[AFHTTPSessionManager alloc] initWithBaseURL:self.baseURL];
+    AFHTTPSessionManager *sessionManager = [[AFHTTPSessionManager alloc] initWithBaseURL:self.baseURL];
   
     NSURL *requestUrl = [NSURL URLWithString:@"/post" relativeToURL:self.baseURL];
   
     __block BOOL completeBlockCalled = NO;
-
+    NSError *errorFormAppend;
+    __block NSError *errorPost;
+  
     NSURLSessionDataTask *task = [sessionManager POST:requestUrl.absoluteString
                                            parameters:nil
                             constructingBodyWithBlock:^(id<AFMultipartFormData> formData) {
-        NSError *error;
+        NSError *error = errorFormAppend;
         [formData appendPartWithFileURL:[self testFileURL]
                                    name:@"test.txt"
                                   error:&error];
     } success:^(NSURLSessionDataTask *task, id responseObject) {
         completeBlockCalled = YES;
-    } failure:^(NSURLSessionDataTask *task, NSError *error) {}];
-    
+    } failure:^(NSURLSessionDataTask *task, NSError *error) {
+        errorPost = error;
+    }];
+  
+    expect(errorFormAppend).will.beNil();
+    expect(errorPost).will.beNil();
     expect(task.state).will.equal(NSURLSessionTaskStateCompleted);
     expect(completeBlockCalled).will.beTruthy();
 }
